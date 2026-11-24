@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -28,10 +27,25 @@ app.use(
     origin:
       process.env.CLIENT_ORIGIN ||
       "http://localhost:5173",
-  }),
+  })
 );
 
 app.use(express.json({ limit: "32kb" }));
+
+// Health check
+app.get("/", (req, res) => {
+  res.json({ message: "JobTrack API is running" });
+});
+
+// Database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // API routes
 app.use("/api", authRoutes);
@@ -40,19 +54,12 @@ app.use("/api", jobRoutes);
 // Centralized error handling
 app.use(errorHandler);
 
-// Connect database and start server
-async function startServer() {
-  try {
-    await connectDB();
-
-    app.listen(PORT, () => {
-      console.log("JobTrack API ready");
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Server startup failed:", error.message);
-    process.exit(1);
-  }
+// Start local server
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }
 
-startServer();
+// Export Express application
+export default app;
